@@ -1,38 +1,51 @@
 import cv2
-import tensorflow as tf
 import numpy as np
 
-# Загрузка предварительно обученной модели нейросети (например, EDSR)
-model = tf.keras.models.load_model('path_to_pretrained_model')
+# Чтение гиф-изображения
+gif_path = 'test_1.gif.mp4'
+cap = cv2.VideoCapture(gif_path)
 
-# Открытие видеофайла
-video_capture = cv2.VideoCapture('example.mp4')
+# Определение цветового диапазона для синего цвета
+lower_blue = np.array([100, 50, 50])
+upper_blue = np.array([140, 255, 255])
 
-# Получение информации о видео (размеры кадра, частота кадров и т.д.)
-frame_width = int(video_capture.get(3))
-frame_height = int(video_capture.get(4))
-fps = video_capture.get(cv2.CAP_PROP_FPS)
-out = cv2.VideoWriter('example.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_width, frame_height))
+# Пустой список для хранения координат центра синего кружка
+trajectory = []
 
+# Проход по каждому кадру гиф-изображения
 while True:
-    ret, frame = video_capture.read()
+    ret, frame = cap.read()
     if not ret:
         break
 
-    # Преобразование кадра в формат, подходящий для нейросети (например, масштабирование значений пикселей)
-    input_frame = frame / 255.0
-    input_frame = np.expand_dims(input_frame, axis=0)
+    # Преобразование кадра в цветовое пространство HSV
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    # Улучшение качества изображения с помощью нейросети
-    enhanced_frame = model.predict(input_frame)
+    # Создание маски для определения синего цвета
+    mask = cv2.inRange(hsv, lower_blue, upper_blue)
 
-    # Преобразование улучшенного кадра обратно в формат OpenCV
-    enhanced_frame = np.clip(enhanced_frame[0] * 255, 0, 255).astype(np.uint8)
+    # Поиск контуров объектов на изображении
+    contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Запись улучшенного кадра в выходное видео
-    out.write(enhanced_frame)
+    # Отображение траектории движения синего кружка
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area > 100:  # минимальная площадь для обнаружения объекта
+            x, y, w, h = cv2.boundingRect(contour)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            # Нахождение центра контура и добавление координат в список траектории
+            center_x = x + w // 2
+            center_y = y + h // 2
+            trajectory.append((center_x, center_y))
 
-# Освобождение ресурсов
-video_capture.release()
-out.release()
+    # Отображение кадра с выделенной траекторией
+    cv2.imshow('Trajectory', frame)
+    if cv2.waitKey(30) & 0xFF == ord('q'):
+        break
+
+cap.release()
 cv2.destroyAllWindows()
+
+# Вывод траектории движения
+for point in trajectory:
+    print(point)
