@@ -1,54 +1,42 @@
-import pygame
-import math
+import cv2
+import numpy as np
 
-# Инициализация Pygame
-pygame.init()
+# Создаем пустое изображение размером 500x500 пикселей
+img = np.zeros((500, 500, 3), np.uint8)
 
-# Установка размеров окна
-width, height = 800, 600
-win = pygame.display.set_mode((width, height))
-pygame.display.set_caption("Движение по пользовательской функции")
+# Начальные координаты точек
+x1, y1 = 250, 100
+x2, y2 = 250, 400
 
-# Начальные координаты квадрата
-x = 50
-y = 50
+# Отображаем изображение
+cv2.imshow('Stickman', img)
 
-# Начальная скорость и ускорение по оси y
-speed_y = 0
-acceleration_y = 0.02  # Уменьшенное ускорение
-
-# Функция для движения по пользовательской функции
-def custom_function(x):
-    return 50 + 50 * math.sin(math.radians(x))
-
-# Ввод времени в течение которого квадрат может двигаться
-movement_time = int(input("Введите время в миллисекундах (например, 5000 для 5 секунд): "))
-
-# Основной игровой цикл
-run = True
-start_time = pygame.time.get_ticks()  # Время начала движения квадрата
-while run:
-    win.fill((255, 255, 255))  # Очистка экрана
-
-    # Рисование квадрата
-    pygame.draw.rect(win, (255, 0, 0), (x, y, 50, 50))
-
-    # Проверка времени движения квадрата
-    current_time = pygame.time.get_ticks()
-    if current_time - start_time < movement_time:
-        # Обновление координат квадрата по пользовательской функции
-        x += 0.3  # Уменьшенный шаг
-        y = custom_function(x)
-
-        # Применение ускорения к скорости по оси y
-        speed_y += acceleration_y
-        y += speed_y
-
-    # Обработка событий
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            run = False
-
-    pygame.display.update()  # Обновление экрана
-
-pygame.quit()  # Выход из Pygame
+# Основной цикл программы
+while True:
+    # Создаем копию изображения
+    frame = img.copy()
+    
+    # Рисуем палочку
+    cv2.line(frame, (250, 100), (250, 400), (255, 0, 0), 2)
+    
+    # Рисуем точки
+    cv2.circle(frame, (x1, y1), 5, (0, 255, 0), -1)
+    cv2.circle(frame, (x2, y2), 5, (0, 255, 0), -1)
+    
+    # Рисуем линию между точками
+    cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    
+    # Отображаем изображение
+    cv2.imshow('Stickman', frame)
+    
+    # Обработка событий кнопок
+    key = cv2.waitKey(1)
+    if key == 27: # Нажатие кнопки ESC для завершения программы
+        break
+    
+    # Изменяем координаты точек в зависимости от положения сгибающейся палочки
+    x1 = 250 - int((250 - 100) * np.sin(np.pi * (y1 - 100) / 300))
+    x2 = 250 + int((250 - 100) * np.sin(np.pi * (y1 - 100) / 300))
+    
+# Закрываем все окна
+cv2.destroyAllWindows()
